@@ -24,23 +24,42 @@ HBITMAP hbmp = nullptr;
 BYTE* line = nullptr;
 UINT sizeOfLine = 0;
 
+clock_t dt0 = 0;
+clock_t dt1 = 0;
+clock_t dt2 = 0;
+clock_t dt3 = 0;
+clock_t dt4 = 0;
+clock_t dt5 = 0;
+
 int captureAndSaveImage(HWND hwnd, HDC hdc, char* fileName, bool saveFile = true) {
 	const BYTE bfh[14] = { 0x42, 0x4d, 0,0,0,0, 0,0, 0,0, 0x36,0,0,0 };
 
+
+
+	clock_t begin = clock();
 	// capture image
 	RECT rect;
 	GetWindowRect(hwnd, &rect);
 	UINT width = rect.right - rect.left;
 	UINT height = rect.bottom - rect.top;
+	dt0 += clock() - begin;
 
 	if (hmdc == nullptr) {
 		hmdc = CreateCompatibleDC(hdc);
 		hbmp = CreateCompatibleBitmap(hdc, width, height);
 	}
 
+
+	//	begin = clock();
 	HBITMAP hbmpOld = (HBITMAP)SelectObject(hmdc, hbmp);
+	//	dt1 += clock() - begin;
+
+//	begin = clock();
 	BitBlt(hmdc, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
+	//dt2 += clock() - begin;
+
 	SelectObject(hmdc, hbmpOld);
+
 
 	if (line == nullptr) {
 		sizeOfLine = width * 3;
@@ -51,16 +70,21 @@ int captureAndSaveImage(HWND hwnd, HDC hdc, char* fileName, bool saveFile = true
 		line = (BYTE*)malloc(sizeOfLine);
 	}
 
+	//begin = clock();
 	BITMAPINFO bi;
-	ZeroMemory(&bi, sizeof bi);
-	bi.bmiHeader.biSize = sizeof bi.bmiHeader;
+//	ZeroMemory(&bi, sizeof bi);
+	//bi.bmiHeader.biSize = sizeof bi.bmiHeader;
+	
+	/*
 	bi.bmiHeader.biWidth = width;
 	bi.bmiHeader.biHeight = height;
 	bi.bmiHeader.biPlanes = 1;
 	bi.bmiHeader.biBitCount = 24;
 	bi.bmiHeader.biCompression = BI_RGB;
-	bi.bmiHeader.biSizeImage = sizeOfLine * height;
+	bi.bmiHeader.biSizeImage = sizeOfLine * height;*/
+	//dt3 += clock() - begin;
 
+	// = clock();
 	// save as bitmap image
 	FILE* file = nullptr;
 	if (saveFile) {
@@ -70,7 +94,9 @@ int captureAndSaveImage(HWND hwnd, HDC hdc, char* fileName, bool saveFile = true
 		fwrite(bfh, sizeof bfh, 1, file);
 		fwrite(&(bi.bmiHeader), sizeof bi.bmiHeader, 1, file);
 	}
+	//	dt4 += clock() - begin;
 
+	//	begin = clock();
 	if (saveFile) {
 		for (unsigned int i = 0; i < height; i++) {
 			GetDIBits(hmdc, hbmp, i, 1, line, &bi, DIB_RGB_COLORS);
@@ -80,6 +106,7 @@ int captureAndSaveImage(HWND hwnd, HDC hdc, char* fileName, bool saveFile = true
 	else {
 		GetDIBits(hmdc, hbmp, 0, height, line, &bi, DIB_RGB_COLORS);
 	}
+	//dt5 += clock() - begin;
 
 	if (saveFile) {
 		fclose(file);
@@ -119,13 +146,21 @@ int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE hPrevInst, LPSTR lpsCmdLine, in
 				sprintf_s(fileName, "%s%03d.bmp", lpsCmdLine, n);
 
 
+				dt0 = dt1 = dt2 = dt3 = dt4 = dt5 = 0;
+
 				begin = clock();
 				for (int i = 0; i < 100; i++) {
 					captureAndSaveImage(hwnd, hdc, fileName, false);
 				}
 				end = clock();
 				elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-				Printf("elapsed time = %f s | average = %f s", elapsed_secs, elapsed_secs / 100);
+				Printf("elapsed time = %f s | average = %f s\n", elapsed_secs, elapsed_secs / 100);
+				Printf("dt0 = %f\n", double(dt0) / CLOCKS_PER_SEC);
+				Printf("dt1 = %f\n", double(dt1) / CLOCKS_PER_SEC);
+				Printf("dt2 = %f\n", double(dt2) / CLOCKS_PER_SEC);
+				Printf("dt3 = %f\n", double(dt3) / CLOCKS_PER_SEC);
+				Printf("dt4 = %f\n", double(dt4) / CLOCKS_PER_SEC);
+				Printf("dt5 = %f\n", double(dt5) / CLOCKS_PER_SEC);
 
 				// ReleaseDC(NULL, hdc);
 				n++;
